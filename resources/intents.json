@@ -1,0 +1,28 @@
+{
+  "intents": [
+    {
+      "intent": "NextRaceIntent"
+    },
+		{
+			"intent": "RaceResultsIntent"
+			"slots": [
+				{
+					"name": "year",
+					"type": "AMAZON.DATE"
+				},
+				{
+					"name": "race",
+					"type": "formula_one_grand_prix"
+				}
+			]
+		},
+    {
+      "intent": "AMAZON.HelpIntent"
+    },
+    {
+      "intent": "AMAZON.StopIntent"
+    },
+    {
+      "intent": "AMAZON.CancelIntent"
+    }]
+}

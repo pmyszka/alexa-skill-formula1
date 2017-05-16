@@ -1,0 +1,86 @@
+#!/bin/bash
+#
+# set -x
+#
+
+uploadLambdaFunction () {
+
+	lambda_function_name=$1
+	lambda_description=$2
+	lambda_handler=$3
+
+	lambda_memory=512
+	lambda_timeout=10
+
+	lambda_assume_role_policy_file=$lambda_function_name-assume-role-policy.json
+	lambda_execution_policy_file=$lambda_function_name-execution-policy.json
+
+	lambda_zip_file=../target/uberjar/$lambda_function_name-0.1.0-SNAPSHOT-standalone.jar
+
+	## Create Role and attach policies
+	lambda_role_check=$(aws iam get-role-policy \
+													--role-name $lambda_function_name-role \
+													--policy-name $lambda_function_name-policy)
+
+	if [ $? -ne 0 ]
+	then
+		lambda_role_arn=$(aws iam create-role \
+													--role-name "$lambda_function_name-role" \
+													--assume-role-policy-document "file://$lambda_assume_role_policy_file" \
+													--output text \
+													--query 'Role.Arn')
+
+		aws iam put-role-policy \
+			--role-name "$lambda_function_name-role" \
+			--policy-name "$lambda_function_name-policy" \
+			--policy-document "file://$lambda_execution_policy_file"
+
+		# Seems to be some timing issue here
+		sleep 10
+
+	else
+		lambda_role_arn=$(aws iam get-role \
+													--role-name "$lambda_function_name-role" \
+													--output text \
+													--query 'Role.Arn')
+	fi
+
+	lambda_function_exists_check=$(aws lambda get-function \
+																			--function-name $lambda_function_name)
+
+	if [ $? -ne 0 ]
+	then
+		## Create the function and upload the ZIP file
+		echo "Create the function $lambda_function_name and upload the ZIP file"
+
+		aws lambda create-function \
+			--function-name "$lambda_function_name" \
+			--runtime java8 \
+			--memory-size "$lambda_memory" \
+			--timeout "$lambda_timeout" \
+			--role "$lambda_role_arn" \
+			--handler "$lambda_handler" \
+			--description "$lambda_description" \
+			--zip-file "fileb://$lambda_zip_file"
+
+	else
+		echo "Update the existing function $lambda_function_name"
+
+		aws lambda update-function-code \
+			--function-name "$lambda_function_name" \
+			--zip-file "fileb://$lambda_zip_file"
+	fi
+}
+
+lein do clean, uberjar
+
+if [ $? -ne 0 ]
+then
+	exit 1
+else
+	uploadLambdaFunction 	\
+		alexa-skill-formula1 \
+		"Formula 1" \
+		alexa-skill-formula1.Formula1SpeechletRequestHandler
+	exit 0
+fi

@@ -1,0 +1,15 @@
+#!/bin/bash -x
+
+lambda_function_name=alexa-skill-formula1
+
+aws lambda delete-function \
+	--function-name "$lambda_function_name"
+
+aws iam delete-role-policy \
+	--role-name "$lambda_function_name-role" \
+	--policy-name "$lambda_function_name-policy"
+
+aws iam delete-role
+	--role-name "$lambda_function_name-role" \
+
+exit 0
